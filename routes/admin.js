@@ -1,7 +1,7 @@
 import express from "express";
-import { verifyToken, isAdmin } from "../middleware/auth";
-import User from "../model/userModel";
-import userRoutes from "./user";
+import { verifyToken, isAdmin } from "../middleware/auth.js";
+import User from "../model/userModel.js";
+import userRoutes from "./user.js";
 const adminRoutes = express.Router();
 
 //search users

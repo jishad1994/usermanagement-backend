@@ -6,7 +6,11 @@ import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/user.js";
 import adminRoutes from "./routes/admin.js";
 import { connectDB } from "./db/db.js";
+import fs from "fs";
 
+if (!fs.existsSync("uploads")) {
+    fs.mkdirSync("uploads");
+}
 dotenv.config();
 export const app = express();
 app.use(cors());

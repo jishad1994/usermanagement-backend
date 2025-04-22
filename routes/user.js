@@ -1,8 +1,7 @@
 import express from "express";
-import upload from "../utils/multer";
-import { isAdmin } from "../middleware/auth";
-import { verifyToken } from "../middleware/auth";
-import User from "../model/userModel";
+import { verifyToken } from "../middleware/auth.js";
+import User from "../model/userModel.js";
+import upload from "../utils/multer.js";
 const userRoutes = express.Router();
 
 //request to view profile
