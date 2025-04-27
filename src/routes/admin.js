@@ -2,6 +2,7 @@ const express = require('express');
 const User = require('../models/user');
 const { authenticateToken, isAdmin } = require('../middleware/auth');
 const router = express.Router();
+const bcrypt=require('bcryptjs')
 
 router.get('/users', authenticateToken, isAdmin, async (req, res) => {
   const { search } = req.query;
@@ -17,11 +18,13 @@ router.get('/users', authenticateToken, isAdmin, async (req, res) => {
 router.post('/users', authenticateToken, isAdmin, async (req, res) => {
   const { username, email, phone, password, role } = req.body;
   try {
+    console.log(username, email, phone, password, role)
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({ username, email, phone, password: hashedPassword, role });
     await user.save();
     res.status(201).json({ message: 'User created' });
   } catch (error) {
+    console.log(error.message)
     res.status(400).json({ message: error.message });
   }
 });

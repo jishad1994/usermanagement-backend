@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const multer = require("multer");
 const router = express.Router();
+const { authenticateToken, isAdmin } = require("../middleware/auth");
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, "uploads/"),
@@ -25,11 +26,13 @@ const upload = multer({ storage, fileFilter });
 router.post("/register", async (req, res) => {
     const { username, email, phone, password } = req.body;
     try {
+        console.log(username, email);
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = new User({ username, email, phone, password: hashedPassword });
         await user.save();
         res.status(201).json({ message: "User registered" });
     } catch (error) {
+        console.log("error while regitsering", error.message);
         res.status(400).json({ message: error.message });
     }
 });
@@ -37,26 +40,49 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
     const { username, password } = req.body;
     try {
+        console.log("username:", username);
         const user = await User.findOne({ username });
         if (!user || !(await bcrypt.compare(password, user.password))) {
+            console.log("pasword doesnt match condition worked");
             return res.status(401).json({ message: "Invalid credentials" });
         }
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1h" });
-        res.json({ token, role: user.role });
+        console.log("user:", user);
+        // const { password, ...userDetails } = user;
+        // console.log("userDetails:", userDetails);
+        res.json({ token, role: user.role, user });
     } catch (error) {
+        console.log("server error login:", error.message);
         res.status(500).json({ message: error.message });
     }
 });
 
-router.post("/profile/upload", upload.single("profileImage"), async (req, res) => {
+router.post("/profile/upload", authenticateToken, upload.single("profileImage"), async (req, res) => {
     try {
+        console.log("req.user:", req.user);
+        console.log("req.file:", req.file.path);
         const user = await User.findById(req.user.id);
         user.profileImage = req.file.path;
         await user.save();
-        res.json({ message: "Profile image uploaded" });
+        console.log("usera fter setting image:", user);
+        res.json({ message: "Profile image uploaded", user });
     } catch (error) {
+        console.log("error while uploading", error.message);
         res.status(500).json({ message: error.message });
     }
 });
 
+router.get("/getUserData", authenticateToken, async (req, res) => {
+    try {
+        console.log("req reached in getUsserData");
+        console.log("req.user reached get user data:", req.user);
+        const user = await User.findById(req.user.id).select("-password");
+        console.log(user);
+        if (!user) return res.status(404).json({ message: "no user data found" });
+        return res.status(200).json(user);
+    } catch (error) {
+        console.log("error while fetching user data", error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
 module.exports = router;
