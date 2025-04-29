@@ -4,7 +4,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user");
 const multer = require("multer");
 const router = express.Router();
-const { authenticateToken, isAdmin } = require("../middleware/auth");
+const { authenticateToken, isAdmin, multerErrorHandler } = require("../middleware/auth");
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, "uploads/"),
@@ -22,18 +22,51 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({ storage, fileFilter });
+router.post("/profile/upload", authenticateToken, upload.single("profileImage"), async (req, res) => {
+    try {
+        console.log("req.user:", req.user);
+        console.log("req.file:", req.file.path);
+        const user = await User.findById(req.user.id);
+        user.profileImage = req.file.path;
+        await user.save();
+        console.log("usera fter setting image:", user);
+        res.json({ message: "Profile image uploaded successfully", user });
+    } catch (error) {
+        console.log("error while uploading", error.message);
+        res.status(500).json({ message: error.message });
+    }
+});
 
 router.post("/register", async (req, res) => {
     const { username, email, phone, password } = req.body;
     try {
-        console.log(username, email);
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = new User({ username, email, phone, password: hashedPassword });
         await user.save();
         res.status(201).json({ message: "User registered" });
     } catch (error) {
-        console.log("error while regitsering", error.message);
-        res.status(400).json({ message: error.message });
+        if (error.code === 11000) {
+            console.log("duplicate error worked", error.code);
+            console.log("Error keyValue:", error.keyValue);
+
+            const duplicateField = Object.keys(error.keyValue)[0];
+            console.log("object keys", duplicateField);
+            let message = "";
+
+            if (duplicateField === "username") {
+                message = "Username already exists.";
+                return res.status(400).json({ message });
+            } else if (duplicateField === "email") {
+                message = "Email already exists.";
+                return res.status(400).json({ message });
+            } else {
+                message = "Duplicate field value.";
+                return res.status(400).json({ message });
+            }
+        }
+
+        console.log("error is:", error.message);
+        res.status(500).json({ message: "Registration failed. Please try again." });
     }
 });
 
@@ -53,21 +86,6 @@ router.post("/login", async (req, res) => {
         res.json({ token, role: user.role, user });
     } catch (error) {
         console.log("server error login:", error.message);
-        res.status(500).json({ message: error.message });
-    }
-});
-
-router.post("/profile/upload", authenticateToken, upload.single("profileImage"), async (req, res) => {
-    try {
-        console.log("req.user:", req.user);
-        console.log("req.file:", req.file.path);
-        const user = await User.findById(req.user.id);
-        user.profileImage = req.file.path;
-        await user.save();
-        console.log("usera fter setting image:", user);
-        res.json({ message: "Profile image uploaded", user });
-    } catch (error) {
-        console.log("error while uploading", error.message);
         res.status(500).json({ message: error.message });
     }
 });

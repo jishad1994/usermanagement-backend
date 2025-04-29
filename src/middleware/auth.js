@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const multer = require('multer');
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers["authorization"];
@@ -27,4 +28,19 @@ const isAdmin = (req, res, next) => {
     next();
 };
 
-module.exports = { authenticateToken, isAdmin };
+
+
+// Custom multer error handler middleware
+function multerErrorHandler(err, req, res, next) {
+  if (err instanceof multer.MulterError) {
+    // Multer-specific errors
+    return res.status(400).json({ message: err.message });
+  } else if (err) {
+    // Custom errors like fileFilter failures
+    return res.status(400).json({ message: err.message });
+  }
+  next(); // No errors, go to next middleware/route
+}
+
+
+module.exports = { authenticateToken, isAdmin ,multerErrorHandler};
